@@ -2,6 +2,8 @@
 
 	* configure.ac:
 	Started 0.6.0 version
+	* docwordscompletion-plugin.c: 
+	Removed old options to do this plugin 0.6.0 compatible
 
 2008-09-04  Chuchi  <perriman@homer>
 

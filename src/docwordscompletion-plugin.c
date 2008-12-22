@@ -192,9 +192,10 @@ impl_update_ui (GeditPlugin *plugin,
 			GValue value = {0,};
 			g_value_init(&value,G_TYPE_STRING);
 			g_value_set_string(&value,dw_plugin->priv->conf->si_keys);
-			g_object_set_property(G_OBJECT(comp),
-						"info-keys",
-						&value);
+			g_object_set (comp,
+				      "info-keys",
+				      dw_plugin->priv->conf->si_keys,
+				      NULL);
 		}
 
 		if (gsc_manager_get_provider(comp,GSC_DOCUMENTWORDS_PROVIDER_NAME)==NULL)
@@ -203,19 +204,12 @@ impl_update_ui (GeditPlugin *plugin,
 			GscTriggerCustomkey *ck_trigger = gsc_trigger_customkey_new(comp,
 					OPEN_DOCS_TRIGGER_NAME, 
 					dw_plugin->priv->conf->od_keys);
-			g_debug("OD keys: %s",dw_plugin->priv->conf->od_keys);
-			GscManagerEventOptions *opts = g_new0(GscManagerEventOptions,1);
-			opts->filter_type = GSC_POPUP_FILTER_TREE;
-			opts->position_type = GSC_POPUP_POSITION_CENTER_PARENT;
-			gsc_trigger_customkey_set_opts(ck_trigger,
-							opts);
 			gsc_manager_register_trigger(comp,GSC_TRIGGER(ck_trigger));
 			g_object_unref(ck_trigger);
 			
-			/*FIXME:
-			 Create a funtion "update_conf" and we must to call it here
-			 and when the user changes the configuration.
-			 */
+			/*FIXME: Create a funtion "update_conf" and we must to 
+			 call it here and when the user changes the configuration.
+			*/
 							
 			if (dw_plugin->priv->conf->ac_enabled)
 			{
