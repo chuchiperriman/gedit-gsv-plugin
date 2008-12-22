@@ -1,0 +1,9 @@
+[Gedit Plugin]
+Module=docwordscompletion
+IAge=2
+_Name=Document Words Completion
+_Description=Adds words (auto)completion support to gedit
+Icon=gedit-plugin
+Authors=chuchiperriman <chuchiperriman@gmail.com>
+Copyright=Copyright © 2007 chuchiperriman
+Website=http://www.gedit.org

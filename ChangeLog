@@ -1,0 +1,86 @@
+2008-12-22  Jesús Barbero Rodríguez <chuchiperriman@gmail.com>
+
+	* configure.ac:
+	Started 0.6.0 version
+
+2008-09-04  Chuchi  <perriman@homer>
+
+	* docwordscompletion-plugin.c: Use the new USER_REQUEST_TRIGGER_NAME.
+	We activate this trigger by default and you can use <control>Return to
+	trigger the completion words.
+
+2008-08-30  Chuchi  <perriman@homer>
+
+	* Fixed #2067266, docwordscompletion-plugin: We load the info-keys at
+	start up.
+
+2008-08-23  Chuchi  <perriman@homer>
+
+	* Makefile: Fixed error with portable libraries. I remove all -module
+
+=== version 0.5.0 ===
+
+2008-08-17  Chuchi  <perriman@homer>
+
+	* docwordscompletion-plugin:
+		- Sets version to 0.5.0 (like GtkSourceCompletion)
+		- Solved some distcheck issues
+		- Closed 0.5.0
+
+2008-08-09  Chuchi  <perriman@homer>
+
+	* docwordscompletion-plugin.c: 
+		- Added show info keys configuration
+		- Added open documents keys configuration
+
+2008-07-26  Chuchi  <perriman@homer>
+
+	* docwordscompletion-plugin.c: We center the popup (in parent)
+
+2008-07-20  Chuchi  <perriman@homer>
+
+	* docwordscompletion-plugin.c: Set the filter in the open documents
+	trigger
+
+2008-06-30  Chuchi  <perriman@homer>
+
+	* changes: Adapted to the new gsc API. Better memory control
+
+2008-05-23  Chuchi  <perriman@homer>
+
+	* providers: adapted to the changes GTK_SOURCE_IS... by
+	GTK_IS_SOURCE... in gtksourcecompletion
+
+2008-05-16  Chuchi  <perriman@homer>
+
+	* configure: Depends on gtksourcecompletion 0.5.0
+	* providers: Adapted to the new API changes
+
+=== version 0.3.1 ===
+
+2008-05-03  perriman  <chuchiperriman@gmail.com>
+
+	* gsc-geditrecent-provider.c: Upload the provider :)
+
+2008-04-30  perriman  <perriman@portatil>
+
+	* gsc-geditrecent-provider.c: Created new provider that shows the 
+	gedit recent open documents.
+
+2008-04-06  perriman  <perriman@portatil>
+
+	* gsc-geditopendoc-provider.c: Don't show the current document
+
+2008-04-05  perriman  <perriman@portatil>
+
+	* dependencies: DEPENDENCY OF GtkSourceCompletion 0.4.1. Adapted to the
+	new API changes
+	* gsc-geditopendoc-provider: Created new provider that shows the current
+	open documents and if you select a document, it activate this document
+
+
+==== gedit-docwordscompletion 0.3.0 ====
+
+2007-09-29  Jesús Barbero  <chuchiperriman@gmail.com>
+
+	Initial release

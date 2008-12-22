@@ -1,0 +1,7 @@
+News in 0.5.0
+-------------
+
+* Better memory control.
+* Show the filter when the user want to see the open documents in the popup.
+* Center the popup in open documents trigger.
+* Added some new configuration keys.
