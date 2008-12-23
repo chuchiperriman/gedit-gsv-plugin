@@ -3,6 +3,9 @@
 	* gsc-provider-open[ch]: 
 	Provider to show the open files and overwrite apply function to open
 	the selected file
+	* gsc-provider-recent[ch]: 
+	Provider to show the recentn files and overwrite apply function to open
+	the selected file
 
 2008-12-22  Jesús Barbero Rodríguez <chuchiperriman@gmail.com>
 

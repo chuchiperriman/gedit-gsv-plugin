@@ -20,6 +20,7 @@
 #include <glib/gprintf.h>
 #include <string.h>
 #include "gsc-geditrecent-provider.h"
+#include "gsc-proposal-recent.h"
 
 #define ICON_FILE ICON_DIR"/locals.png"
 
@@ -27,11 +28,6 @@ struct _GscGeditrecentProviderPrivate {
 	GeditWindow *window;
 	GdkPixbuf *icon;
 };
-
-typedef struct {
-	GscGeditrecentProvider *provider;
-	gchar* uri;
-}RecentData;
 
 #define GSC_GEDITRECENT_PROVIDER_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_GSC_GEDITRECENT_PROVIDER, GscGeditrecentProviderPrivate))
 
@@ -48,26 +44,6 @@ static GscProviderIface* gsc_geditrecent_provider_gsc_manager_provider_parent_if
 static const gchar* gsc_geditrecent_provider_real_get_name (GscProvider* self)
 {
 	return GSC_GEDITRECENT_PROVIDER_NAME;
-}
-
-static gboolean
-_apply_cd(GscProposal* proposal, GtkTextView *view, gpointer user_data)
-{
-	RecentData *rd = (RecentData*)user_data;
-	GscGeditrecentProvider *self = rd->provider;
-	gedit_commands_load_uri(self->priv->window,
-				rd->uri,
-				NULL,
-				1);
-	return TRUE;
-}
-
-static void
-_apply_closure_cb (gpointer data,GClosure *closure)
-{
-	RecentData *rd = (RecentData*)data;
-	g_free(rd->uri);
-	g_free(rd);
 }
 
 static gint
@@ -102,24 +78,11 @@ static GList* gsc_geditrecent_provider_real_get_proposals (GscProvider* base, Gs
         for (l = filtered_items; l != NULL; l = l->next)
         {
         	GtkRecentInfo *info = l->data;
-        	const gchar *uri;
-        	display_name = gtk_recent_info_get_display_name (info);
-        	uri = gtk_recent_info_get_uri (info);
-        	item = gsc_proposal_new(display_name,
-        						  uri,
-							  self->priv->icon);
-		gsc_proposal_set_page_name(item,"Recent Files");
 		
-		RecentData *data = g_new0(RecentData,1);
-		data->provider = self;
-		data->uri = g_strdup(uri);
-		g_signal_connect_data(item, 
-				 "apply",
-				 G_CALLBACK(_apply_cd),
-				 (gpointer)data,
-				 _apply_closure_cb,
-				 0);
-		/*TODO How do I free this uri??????*/
+		item = gsc_proposal_recent_new (self->priv->window,
+						info,
+						self->priv->icon);
+
 		item_list = g_list_append(item_list,item);
         	++i;
         	if (i>=max_recent)
