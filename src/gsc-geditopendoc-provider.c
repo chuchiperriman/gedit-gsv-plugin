@@ -1,4 +1,4 @@
- /* gsc-geditopendoc-provider.c - Type here a short description of your plugin
+ /* gsc-geditopendoc-provider.c
  *
  * Copyright (C) 2008 - perriman
  *
@@ -19,17 +19,14 @@
  
 #include <glib/gprintf.h>
 #include <string.h>
+#include <gtksourcecompletion/gsc-proposal.h>
 #include "gsc-geditopendoc-provider.h"
+#include "gsc-proposal-open.h"
 
 struct _GscGeditopendocProviderPrivate {
 	GeditWindow *window;
 	GdkPixbuf *icon;
 };
-
-typedef struct{
-	GscGeditopendocProvider *provider;
-	GeditDocument *doc;
-}OpenDocData;
 
 #define GSC_GEDITOPENDOC_PROVIDER_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), TYPE_GSC_GEDITOPENDOC_PROVIDER, GscGeditopendocProviderPrivate))
 
@@ -43,24 +40,6 @@ static GscProviderIface* gsc_geditopendoc_provider_parent_iface = NULL;
 static const gchar* gsc_geditopendoc_provider_real_get_name (GscProvider* self)
 {
 	return GSC_GEDITOPENDOC_PROVIDER_NAME;
-}
-
-static gboolean
-_apply_cd(GscProposal* proposal, GtkTextView *view, gpointer user_data)
-{
-	OpenDocData *odd = (OpenDocData*)user_data;
-	GscGeditopendocProvider *self = odd->provider;
-	GeditDocument *doc = odd->doc;
-	GeditTab *tab = gedit_tab_get_from_document(doc);
-	gedit_window_set_active_tab(self->priv->window,tab);
-	return TRUE;
-}
-
-static void
-_apply_closure_cb (gpointer data,GClosure *closure)
-{
-	OpenDocData *odd = (OpenDocData*)data;
-	g_free(odd);
 }
 
 static GList* gsc_geditopendoc_provider_real_get_proposals (GscProvider* base, GscTrigger *trigger)
@@ -80,22 +59,11 @@ static GList* gsc_geditopendoc_provider_real_get_proposals (GscProvider* base, G
 		doc = GEDIT_DOCUMENT(temp->data);
 		if (doc != current_doc)
 		{
-			name = gedit_document_get_short_name_for_display(doc);
-			item = gsc_proposal_new(name,
-						  gedit_document_get_uri_for_display(doc),
-						  self->priv->icon);
-			gsc_proposal_set_page_name(item,"Open Files");
-			OpenDocData *odd = g_new0(OpenDocData,1);
-			odd->provider = self;
-			odd->doc = doc;
-			g_signal_connect_data(item, 
-					 "apply",
-					 G_CALLBACK(_apply_cd),
-					 (gpointer) odd,
-					 _apply_closure_cb,
-					 0);
+			item = gsc_proposal_open_new (self->priv->window,
+						      doc,
+						      self->priv->icon);
 			item_list = g_list_append(item_list,item);
-			g_free(name);
+			
 		}
 		temp = g_list_next(temp);
 	}

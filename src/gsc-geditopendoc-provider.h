@@ -1,5 +1,5 @@
 /*
- * gsc-geditopendoc-provider.h - Type here a short description of your plugin
+ * gsc-geditopendoc-provider.h
  *
  * Copyright (C) 2008 - perriman
  *

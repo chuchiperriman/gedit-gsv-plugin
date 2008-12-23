@@ -16,6 +16,8 @@ libdocwordscompletion_la_SOURCES = \
 	gsc-geditrecent-provider.c	\
 	gsc-geditopendoc-provider.h	\
 	gsc-geditopendoc-provider.c	\
+	gsc-proposal-open.h		\
+	gsc-proposal-open.c		\
 	docwordscompletion-plugin.h	\
 	docwordscompletion-plugin.c
 
