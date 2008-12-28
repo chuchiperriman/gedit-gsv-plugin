@@ -43,6 +43,7 @@
 #define GCONF_AUTOCOMPLETION_ENABLED GCONF_BASE_KEY "/enable_autocompletion"
 #define GCONF_OPEN_ENABLED GCONF_BASE_KEY "/enable_open_documents"
 #define GCONF_RECENT_ENABLED GCONF_BASE_KEY "/enable_recent_documents"
+#define GCONF_AUTOSELECT_ENABLED GCONF_BASE_KEY "/enable_autoselect_documents"
 #define GCONF_AUTOCOMPLETION_DELAY GCONF_BASE_KEY "/autocompletion_delay"
 #define GCONF_USER_REQUEST_EVENT_KEYS GCONF_BASE_KEY "/user_request_event_keys"
 #define GCONF_OPEN_DOCUMENTS_EVENT_KEYS GCONF_BASE_KEY "/open_documents_event_keys"
@@ -55,6 +56,7 @@ struct _ConfData
 	gboolean ac_enabled;
 	gboolean open_enabled;
 	gboolean recent_enabled;
+	gboolean autoselect_enabled;
 	guint ac_delay;
 	gchar* ure_keys;
 	gchar* od_keys;
@@ -108,6 +110,13 @@ docwordscompletion_plugin_init (DocwordscompletionPlugin *plugin)
 	if (value!=NULL)
 	{
 		plugin->priv->conf->recent_enabled =  gconf_value_get_bool(value);
+		gconf_value_free(value);
+	}
+	
+	value = gconf_client_get(plugin->priv->gconf_cli,GCONF_AUTOSELECT_ENABLED,NULL);
+	if (value!=NULL)
+	{
+		plugin->priv->conf->autoselect_enabled =  gconf_value_get_bool(value);
 		gconf_value_free(value);
 	}
 
@@ -249,6 +258,10 @@ impl_update_ui (GeditPlugin *plugin,
 				g_object_unref(grp);
 			}
 			
+			g_object_set (comp,
+				      "autoselect", dw_plugin->priv->conf->autoselect_enabled,
+				      NULL);
+			
 			gsc_manager_activate(comp);
 		}
 
@@ -375,6 +388,34 @@ recent_enabled_toggled(GtkWidget *button,
 				gsc_manager_register_provider(comp,GSC_PROVIDER(prov),OPEN_DOCS_TRIGGER_NAME);
 				g_object_unref(prov);
 			}
+		}
+		windows = g_list_next(windows);
+	}
+}
+
+static void
+autoselect_enabled_toggled(GtkWidget *button,
+			   gpointer user_data)
+{
+	DocwordscompletionPlugin * dw_plugin = (DocwordscompletionPlugin*)user_data;
+	gboolean active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(button));
+
+	gconf_client_set_bool(dw_plugin->priv->gconf_cli,
+				GCONF_AUTOSELECT_ENABLED,
+				active,
+				NULL);
+	
+	dw_plugin->priv->conf->autoselect_enabled = active;
+
+	GList *windows = gedit_window_get_views(dw_plugin->priv->gedit_window);
+	while (windows!=NULL)
+	{
+		GscManager *comp = gsc_manager_get_from_view(GTK_TEXT_VIEW(windows->data));
+		if (comp!=NULL)
+		{
+			g_object_set (comp,
+				      "autoselect", active,
+				      NULL);
 		}
 		windows = g_list_next(windows);
 	}
@@ -597,9 +638,17 @@ create_configure_dialog(GeditPlugin *plugin)
 	
 	g_signal_connect (G_OBJECT (si_keys), "key-press-event",
 			G_CALLBACK (si_keys_key_release_cb), dw_plugin);
+
+	GtkWidget *check_autoselect = gtk_check_button_new_with_label("Enable autoselect proposal");
+	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(check_autoselect),dw_plugin->priv->conf->autoselect_enabled);
+	gtk_table_attach_defaults (GTK_TABLE (table), check_autoselect, 0, 2, 7, 8);
+	gtk_widget_show (check_autoselect);
+	g_signal_connect (G_OBJECT (check_autoselect), "toggled",
+			G_CALLBACK (autoselect_enabled_toggled), dw_plugin);
+	
 	
 	GtkWidget *close = gtk_button_new_from_stock(GTK_STOCK_APPLY);
-	gtk_table_attach_defaults (GTK_TABLE (table), close, 1, 2, 7, 8);
+	gtk_table_attach_defaults (GTK_TABLE (table), close, 1, 2, 8, 9);
 	gtk_widget_show (close);
 	g_signal_connect (G_OBJECT (close), "clicked",
 			G_CALLBACK (apply_configuration), dw_plugin);
