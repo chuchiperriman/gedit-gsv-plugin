@@ -31,7 +31,7 @@
 #include <gtksourcecompletion/gsc-trigger.h>
 #include <gtksourcecompletion/gsc-trigger-customkey.h>
 #include <gtksourcecompletion/gsc-trigger-autowords.h>
-#include <gtksourcecompletion/gsc-documentwords-provider.h>
+#include "gsc-documentwords-provider.h"
 
 #include "gsc-geditopendoc-provider.h"
 #include "gsc-geditrecent-provider.h"
@@ -189,15 +189,16 @@ impl_update_ui (GeditPlugin *plugin,
 		GeditWindow *window)
 {
 	DocwordscompletionPlugin * dw_plugin = (DocwordscompletionPlugin*)plugin;
+	GscTrigger *od_trigger, *ur_trigger, *ac_trigger;
 	dw_plugin->priv->gedit_window = window;
 	gedit_debug (DEBUG_PLUGINS);
 	GtkTextView* view = GTK_TEXT_VIEW(gedit_window_get_active_view(window));
 	if (view!=NULL)
 	{
-		GscManager *comp = gsc_manager_get_from_view(view);
+		GscCompletion *comp = gsc_completion_get_from_view(view);
 		if (comp==NULL)
 		{
-			comp = gsc_manager_new(GTK_TEXT_VIEW(view));
+			comp = GSC_COMPLETION (gsc_completion_new(GTK_TEXT_VIEW(view)));
 			GValue value = {0,};
 			g_value_init(&value,G_TYPE_STRING);
 			g_value_set_string(&value,dw_plugin->priv->conf->si_keys);
@@ -207,39 +208,48 @@ impl_update_ui (GeditPlugin *plugin,
 				      NULL);
 		}
 
-		if (gsc_manager_get_provider(comp,GSC_DOCUMENTWORDS_PROVIDER_NAME)==NULL)
+		od_trigger = gsc_completion_get_trigger(comp, OPEN_DOCS_TRIGGER_NAME);
+		if (od_trigger == NULL)
 		{
-			
-			GscTriggerCustomkey *ck_trigger = gsc_trigger_customkey_new(comp,
+			od_trigger = GSC_TRIGGER (gsc_trigger_customkey_new(comp,
 					OPEN_DOCS_TRIGGER_NAME, 
-					dw_plugin->priv->conf->od_keys);
-			gsc_manager_register_trigger(comp,GSC_TRIGGER(ck_trigger));
-			g_object_unref(ck_trigger);
-			
+					dw_plugin->priv->conf->od_keys));
+			gsc_completion_register_trigger (comp, od_trigger);
+			g_object_unref(od_trigger);
+		}
+		
+		if (gsc_completion_get_provider(comp,GSC_DOCUMENTWORDS_PROVIDER_NAME)==NULL)
+		{
 			/*FIXME: Create a funtion "update_conf" and we must to 
 			 call it here and when the user changes the configuration.
 			*/
 							
 			if (dw_plugin->priv->conf->ac_enabled)
 			{
-				GscTrigger *ur_trigger = 
-					gsc_manager_get_trigger(comp,USER_REQUEST_TRIGGER_NAME);
+				GscDocumentwordsProvider *dw  = gsc_documentwords_provider_new(view);
+				
+				ur_trigger = gsc_completion_get_trigger(comp, USER_REQUEST_TRIGGER_NAME);
 				if (ur_trigger==NULL)
 				{
 					ur_trigger = GSC_TRIGGER(gsc_trigger_customkey_new(
 							comp,
 							USER_REQUEST_TRIGGER_NAME,
 							dw_plugin->priv->conf->ure_keys));
-					gsc_manager_register_trigger(comp,ur_trigger);
+					gsc_completion_register_trigger(comp,ur_trigger);
 					g_object_unref(ur_trigger);
 				}
-				GscTriggerAutowords *ac_trigger = gsc_trigger_autowords_new(comp);
-				gsc_manager_register_trigger(comp,GSC_TRIGGER(ac_trigger));
-				g_object_unref(ac_trigger);
-				gsc_trigger_autowords_set_delay(ac_trigger,dw_plugin->priv->conf->ac_delay);
-				GscDocumentwordsProvider *dw  = gsc_documentwords_provider_new(view);
-				gsc_manager_register_provider(comp,GSC_PROVIDER(dw),GSC_TRIGGER_AUTOWORDS_NAME);
-				gsc_manager_register_provider(comp,GSC_PROVIDER(dw),USER_REQUEST_TRIGGER_NAME);
+				gsc_completion_register_provider(comp,GSC_PROVIDER(dw),ur_trigger);
+				
+				ac_trigger = gsc_completion_get_trigger(comp, GSC_TRIGGER_AUTOWORDS_NAME);
+				if (ac_trigger==NULL)
+				{
+					ac_trigger = GSC_TRIGGER (gsc_trigger_autowords_new(comp));
+					gsc_completion_register_trigger(comp,GSC_TRIGGER(ac_trigger));
+					gsc_trigger_autowords_set_delay(GSC_TRIGGER_AUTOWORDS (ac_trigger),dw_plugin->priv->conf->ac_delay);
+					g_object_unref(ac_trigger);
+				}
+				gsc_completion_register_provider(comp,GSC_PROVIDER(dw),ac_trigger);
+				
 				g_object_unref(dw);
 			}
 			
@@ -247,14 +257,14 @@ impl_update_ui (GeditPlugin *plugin,
 			if (dw_plugin->priv->conf->open_enabled)
 			{
 				GscGeditopendocProvider* od = gsc_geditopendoc_provider_new(window);
-				gsc_manager_register_provider(comp,GSC_PROVIDER(od),OPEN_DOCS_TRIGGER_NAME);
+				gsc_completion_register_provider(comp,GSC_PROVIDER(od),GSC_TRIGGER (od_trigger));
 				g_object_unref(od);
 			}
 			
 			if (dw_plugin->priv->conf->recent_enabled)
 			{
 				GscGeditrecentProvider *grp = gsc_geditrecent_provider_new(window);
-				gsc_manager_register_provider(comp,GSC_PROVIDER(grp),OPEN_DOCS_TRIGGER_NAME);
+				gsc_completion_register_provider(comp,GSC_PROVIDER(grp),GSC_TRIGGER (od_trigger));
 				g_object_unref(grp);
 			}
 			
@@ -262,7 +272,7 @@ impl_update_ui (GeditPlugin *plugin,
 				      "autoselect", dw_plugin->priv->conf->autoselect_enabled,
 				      NULL);
 			
-			gsc_manager_activate(comp);
+			gsc_completion_activate(comp);
 		}
 
 	}
@@ -295,20 +305,20 @@ autocompletion_enabled_toggled(GtkWidget *button,
 	GList *windows = gedit_window_get_views(dw_plugin->priv->gedit_window);
 	while (windows!=NULL)
 	{
-		GscManager *comp = gsc_manager_get_from_view(GTK_TEXT_VIEW(windows->data));
+		GscCompletion *comp = gsc_completion_get_from_view(GTK_TEXT_VIEW(windows->data));
 		if (comp!=NULL)
 		{
 			GscTriggerAutowords * ac_trigger = GSC_TRIGGER_AUTOWORDS(
-					gsc_manager_get_trigger(comp,GSC_TRIGGER_AUTOWORDS_NAME));
+					gsc_completion_get_trigger(comp,GSC_TRIGGER_AUTOWORDS_NAME));
 			if (ac_trigger!=NULL && !active)
 			{
-				gsc_manager_unregister_trigger(comp,GSC_TRIGGER(ac_trigger));
+				gsc_completion_unregister_trigger(comp,GSC_TRIGGER(ac_trigger));
 			}
 		
 			if (ac_trigger==NULL && active)
 			{
 				ac_trigger = gsc_trigger_autowords_new(comp);
-				gsc_manager_register_trigger(comp,GSC_TRIGGER(ac_trigger));
+				gsc_completion_register_trigger(comp,GSC_TRIGGER(ac_trigger));
 				g_object_unref(ac_trigger);
 				gsc_trigger_autowords_set_delay(ac_trigger,dw_plugin->priv->conf->ac_delay);
 			}
@@ -334,21 +344,25 @@ open_enabled_toggled(GtkWidget *button,
 	GList *windows = gedit_window_get_views(dw_plugin->priv->gedit_window);
 	while (windows!=NULL)
 	{
-		GscManager *comp = gsc_manager_get_from_view(GTK_TEXT_VIEW(windows->data));
+		GscCompletion *comp = gsc_completion_get_from_view(GTK_TEXT_VIEW(windows->data));
 		if (comp!=NULL)
 		{
 			GscGeditopendocProvider * prov = GSC_GEDITOPENDOC_PROVIDER(
-					gsc_manager_get_provider(comp,GSC_GEDITOPENDOC_PROVIDER_NAME));
-			if (prov!=NULL && !active)
-			{
-				gsc_manager_unregister_provider(comp,GSC_PROVIDER(prov),OPEN_DOCS_TRIGGER_NAME);
-			}
+					gsc_completion_get_provider(comp,GSC_GEDITOPENDOC_PROVIDER_NAME));
 			
-			if (prov==NULL && active)
-			{
-				prov = gsc_geditopendoc_provider_new(dw_plugin->priv->gedit_window);
-				gsc_manager_register_provider(comp,GSC_PROVIDER(prov),OPEN_DOCS_TRIGGER_NAME);
-				g_object_unref(prov);
+			GscTrigger *od_trigger = gsc_completion_get_trigger (comp, OPEN_DOCS_TRIGGER_NAME);
+			if (od_trigger != NULL){
+				if (prov!=NULL && !active)
+				{
+					gsc_completion_unregister_provider(comp,GSC_PROVIDER(prov),od_trigger);
+				}
+			
+				if (prov==NULL && active)
+				{
+					prov = gsc_geditopendoc_provider_new(dw_plugin->priv->gedit_window);
+					gsc_completion_register_provider(comp,GSC_PROVIDER(prov),od_trigger);
+					g_object_unref(prov);
+				}
 			}
 		}
 		windows = g_list_next(windows);
@@ -372,21 +386,24 @@ recent_enabled_toggled(GtkWidget *button,
 	GList *windows = gedit_window_get_views(dw_plugin->priv->gedit_window);
 	while (windows!=NULL)
 	{
-		GscManager *comp = gsc_manager_get_from_view(GTK_TEXT_VIEW(windows->data));
+		GscCompletion *comp = gsc_completion_get_from_view(GTK_TEXT_VIEW(windows->data));
 		if (comp!=NULL)
 		{
 			GscGeditrecentProvider * prov = GSC_GEDITRECENT_PROVIDER(
-					gsc_manager_get_provider(comp,GSC_GEDITRECENT_PROVIDER_NAME));
-			if (prov!=NULL && !active)
-			{
-				gsc_manager_unregister_provider(comp,GSC_PROVIDER(prov),OPEN_DOCS_TRIGGER_NAME);
-			}
+					gsc_completion_get_provider(comp,GSC_GEDITRECENT_PROVIDER_NAME));
+			GscTrigger *od_trigger = gsc_completion_get_trigger (comp, OPEN_DOCS_TRIGGER_NAME);
+			if (od_trigger != NULL){
+				if (prov!=NULL && !active)
+				{
+					gsc_completion_unregister_provider(comp,GSC_PROVIDER(prov), od_trigger);
+				}
 			
-			if (prov==NULL && active)
-			{
-				prov = gsc_geditrecent_provider_new(dw_plugin->priv->gedit_window);
-				gsc_manager_register_provider(comp,GSC_PROVIDER(prov),OPEN_DOCS_TRIGGER_NAME);
-				g_object_unref(prov);
+				if (prov==NULL && active)
+				{
+					prov = gsc_geditrecent_provider_new(dw_plugin->priv->gedit_window);
+					gsc_completion_register_provider(comp,GSC_PROVIDER(prov), od_trigger);
+					g_object_unref(prov);
+				}
 			}
 		}
 		windows = g_list_next(windows);
@@ -410,7 +427,7 @@ autoselect_enabled_toggled(GtkWidget *button,
 	GList *windows = gedit_window_get_views(dw_plugin->priv->gedit_window);
 	while (windows!=NULL)
 	{
-		GscManager *comp = gsc_manager_get_from_view(GTK_TEXT_VIEW(windows->data));
+		GscCompletion *comp = gsc_completion_get_from_view(GTK_TEXT_VIEW(windows->data));
 		if (comp!=NULL)
 		{
 			g_object_set (comp,
@@ -443,11 +460,11 @@ delay_changed(GtkWidget *widget,
 	GList *windows = gedit_window_get_views(dw_plugin->priv->gedit_window);
 	while (windows!=NULL)
 	{
-			GscManager *comp = gsc_manager_get_from_view(GTK_TEXT_VIEW(windows->data));
+			GscCompletion *comp = gsc_completion_get_from_view(GTK_TEXT_VIEW(windows->data));
 			if (comp!=NULL)
 			{
 				GscTriggerAutowords *ac_trigger = GSC_TRIGGER_AUTOWORDS(
-						gsc_manager_get_trigger(comp,GSC_TRIGGER_AUTOWORDS_NAME));
+						gsc_completion_get_trigger(comp,GSC_TRIGGER_AUTOWORDS_NAME));
 				if (ac_trigger!=NULL)
 				{
 					gsc_trigger_autowords_set_delay(ac_trigger,dw_plugin->priv->conf->ac_delay);
@@ -464,18 +481,18 @@ _refresh_keys(DocwordscompletionPlugin *dw_plugin)
 	GList *windows = gedit_window_get_views(dw_plugin->priv->gedit_window);
 	while (windows!=NULL)
 	{
-			GscManager *comp = gsc_manager_get_from_view(GTK_TEXT_VIEW(windows->data));
+			GscCompletion *comp = gsc_completion_get_from_view(GTK_TEXT_VIEW(windows->data));
 			if (comp!=NULL)
 			{
 				GscTrigger *ur_trigger = 
-						gsc_manager_get_trigger(comp,USER_REQUEST_TRIGGER_NAME);
+						gsc_completion_get_trigger(comp,USER_REQUEST_TRIGGER_NAME);
 
 				if (ur_trigger!=NULL && GSC_IS_TRIGGER_CUSTOMKEY(ur_trigger))
 					gsc_trigger_customkey_set_keys(GSC_TRIGGER_CUSTOMKEY(ur_trigger),
 						dw_plugin->priv->conf->ure_keys);
 					
 				GscTriggerCustomkey *od_trigger = GSC_TRIGGER_CUSTOMKEY(
-						gsc_manager_get_trigger(comp,OPEN_DOCS_TRIGGER_NAME));
+						gsc_completion_get_trigger(comp,OPEN_DOCS_TRIGGER_NAME));
 				if (od_trigger!=NULL)
 					gsc_trigger_customkey_set_keys(od_trigger,
 						dw_plugin->priv->conf->od_keys);

@@ -25,7 +25,7 @@
 #include <glib-object.h>
 #include <gedit/gedit-plugin.h>
 #include <gtksourcecompletion/gsc-provider.h>
-#include <gtksourcecompletion/gsc-manager.h>
+#include <gtksourcecompletion/gsc-completion.h>
 
 G_BEGIN_DECLS
 

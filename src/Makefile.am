@@ -5,13 +5,15 @@ INCLUDES = \
 	$(GEDIT_CFLAGS) 						\
 	$(WARN_CFLAGS)							\
 	$(DISABLE_DEPRECATED_CFLAGS)					\
-	`pkg-config --cflags gtksourcecompletion-1.0`			\
+	`pkg-config --cflags gtksourcecompletion-2.0`			\
 	`pkg-config --cflags gconf-2.0`			\
 	-DGEDIT_LOCALEDIR=\""$(prefix)/$(DATADIRNAME)/locale"\"
 
 plugin_LTLIBRARIES = libdocwordscompletion.la
 
 libdocwordscompletion_la_SOURCES = \
+	gsc-documentwords-provider.h	\
+	gsc-documentwords-provider.c	\
 	gsc-geditrecent-provider.h	\
 	gsc-geditrecent-provider.c	\
 	gsc-geditopendoc-provider.h	\
@@ -23,7 +25,7 @@ libdocwordscompletion_la_SOURCES = \
 	docwordscompletion-plugin.h	\
 	docwordscompletion-plugin.c
 
-libdocwordscompletion_la_LDFLAGS = $(PLUGIN_LIBTOOL_FLAGS) `pkg-config --libs gtksourcecompletion-1.0` `pkg-config --libs gconf-2.0`
+libdocwordscompletion_la_LDFLAGS = $(PLUGIN_LIBTOOL_FLAGS) `pkg-config --libs gtksourcecompletion-2.0` `pkg-config --libs gconf-2.0`
 
 # Glade files (if you use glade for your plugin, list those files here)
 gladedir = $(datadir)/gedit-2/glade
