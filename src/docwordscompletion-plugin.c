@@ -272,7 +272,7 @@ impl_update_ui (GeditPlugin *plugin,
 				      "autoselect", dw_plugin->priv->conf->autoselect_enabled,
 				      NULL);
 			
-			gsc_completion_activate(comp);
+			gsc_completion_set_active (comp, TRUE);
 		}
 
 	}

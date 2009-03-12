@@ -316,8 +316,7 @@ static void gsc_documentwords_provider_init (GscDocumentwordsProvider * self)
 	self->priv->count=0;
 	self->priv->view = NULL;
 	self->priv->cleaned_word=NULL;
-	//FIXME self->priv->icon = gdk_pixbuf_new_from_file(ICON_FILE,NULL);
-	self->priv->icon = NULL;
+	self->priv->icon = gdk_pixbuf_new_from_file(ICON_FILE,NULL);
 	self->priv->sort_type = GSC_DOCUMENTWORDS_PROVIDER_SORT_BY_LENGTH;
 }
 
