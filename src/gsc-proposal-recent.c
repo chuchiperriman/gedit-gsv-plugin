@@ -56,6 +56,7 @@ gsc_proposal_recent_class_init (GscProposalRecentClass *klass)
 	
 	GscProposalClass *proposal_class = GSC_PROPOSAL_CLASS (klass);
 	proposal_class->apply = gsc_proposal_recent_apply;
+	object_class->finalize = gsc_proposal_recent_finalize;
 }
 
 static void

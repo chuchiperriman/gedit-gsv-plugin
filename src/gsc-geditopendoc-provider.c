@@ -33,7 +33,6 @@ struct _GscGeditopendocProviderPrivate {
 static const gchar* gsc_geditopendoc_provider_real_get_name (GscProvider* self);
 static GList* gsc_geditopendoc_provider_real_get_proposals (GscProvider* base, GscTrigger *trigger);
 static void gsc_geditopendoc_provider_real_end_completion (GscProvider* base);
-static gchar* gsc_geditopendoc_provider_real_get_item_info_markup (GscProvider *self, GscProposal *item);
 static gpointer gsc_geditopendoc_provider_parent_class = NULL;
 static GscProviderIface* gsc_geditopendoc_provider_parent_iface = NULL;
 
@@ -46,10 +45,9 @@ static GList* gsc_geditopendoc_provider_real_get_proposals (GscProvider* base, G
 {
 
 	GList *item_list = NULL;
-	GList *list,*wins,*temp;
+	GList *wins,*temp;
 	GeditDocument *doc, *current_doc;
 	GscProposal *item;
-	gchar* name;
 	GscGeditopendocProvider *self = GSC_GEDITOPENDOC_PROVIDER (base);
 	wins = gedit_window_get_documents(self->priv->window);
 	current_doc = gedit_window_get_active_document(self->priv->window);
@@ -75,11 +73,6 @@ static GList* gsc_geditopendoc_provider_real_get_proposals (GscProvider* base, G
 static void gsc_geditopendoc_provider_real_end_completion (GscProvider* base)
 {
 
-}
-
-static void gsc_geditopendoc_provider_real_data_free (GscProvider* self, GscProposal* data)
-{
-	g_debug("gedit open data free");
 }
 
 static void gsc_geditopendoc_provider_get_property (GObject * object, guint property_id, GValue * value, GParamSpec * pspec)

@@ -39,12 +39,6 @@ gsc_proposal_open_apply(GscProposal* proposal, GtkTextView *view)
 }
 
 static void
-gsc_proposal_open_finalize (GObject *object)
-{
-	G_OBJECT_CLASS (gsc_proposal_open_parent_class)->finalize (object);
-}
-
-static void
 gsc_proposal_open_class_init (GscProposalOpenClass *klass)
 {
 	GObjectClass* object_class = G_OBJECT_CLASS (klass);

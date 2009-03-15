@@ -61,7 +61,6 @@ static GList* gsc_geditrecent_provider_real_get_proposals (GscProvider* base, Gs
 	GtkRecentManager *recent_manager =  gtk_recent_manager_get_default ();
 	GList *items = gtk_recent_manager_get_items (recent_manager);
 	GList *filtered_items = NULL, *l;
-	const gchar *display_name;
 	/* filter */
         for (l = items; l != NULL; l = l->next)
         {
@@ -97,11 +96,6 @@ static GList* gsc_geditrecent_provider_real_get_proposals (GscProvider* base, Gs
 
 static void gsc_geditrecent_provider_real_end_completion (GscProvider* base)
 {
-}
-
-static void gsc_geditrecent_provider_real_data_free (GscProvider* self, GscProposal* data)
-{
-	
 }
 
 static void gsc_geditrecent_provider_get_property (GObject * object, guint property_id, GValue * value, GParamSpec * pspec)
