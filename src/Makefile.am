@@ -6,7 +6,7 @@ INCLUDES = \
 	$(WARN_CFLAGS)							\
 	$(DISABLE_DEPRECATED_CFLAGS)					\
 	`pkg-config --cflags gtksourcecompletion-2.0`			\
-	`pkg-config --cflags gconf-2.0`			\
+	`pkg-config --cflags gconf-2.0`					\
 	-DGEDIT_LOCALEDIR=\""$(prefix)/$(DATADIRNAME)/locale"\"		\
 	-DICON_DIR=\""$(datadir)/gtksourcecompletion/pixmaps"\" 
 

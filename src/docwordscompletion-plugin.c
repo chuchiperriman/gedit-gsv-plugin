@@ -30,6 +30,7 @@
 #include <gconf/gconf-client.h>
 #include <gtksourcecompletion/gsc-trigger.h>
 #include <gtksourcecompletion/gsc-trigger-customkey.h>
+#include <gtksourcecompletion/gsc-trigger-userrequest.h>
 #include <gtksourcecompletion/gsc-trigger-autowords.h>
 #include "gsc-documentwords-provider.h"
 
@@ -228,13 +229,11 @@ impl_update_ui (GeditPlugin *plugin,
 			{
 				GscDocumentwordsProvider *dw  = gsc_documentwords_provider_new(view);
 				
-				ur_trigger = gsc_completion_get_trigger(comp, USER_REQUEST_TRIGGER_NAME);
+				ur_trigger = gsc_completion_get_trigger(comp, GSC_TRIGGER_USERREQUEST_NAME);
 				if (ur_trigger==NULL)
 				{
-					ur_trigger = GSC_TRIGGER(gsc_trigger_customkey_new(
-							comp,
-							USER_REQUEST_TRIGGER_NAME,
-							dw_plugin->priv->conf->ure_keys));
+					ur_trigger = GSC_TRIGGER(gsc_trigger_userrequest_new (comp));
+					/*TODO Assign the configured keys*/
 					gsc_completion_register_trigger(comp,ur_trigger);
 					g_object_unref(ur_trigger);
 				}
@@ -485,7 +484,7 @@ _refresh_keys(DocwordscompletionPlugin *dw_plugin)
 			if (comp!=NULL)
 			{
 				GscTrigger *ur_trigger = 
-						gsc_completion_get_trigger(comp,USER_REQUEST_TRIGGER_NAME);
+						gsc_completion_get_trigger(comp,GSC_TRIGGER_USERREQUEST_NAME);
 
 				if (ur_trigger!=NULL && GSC_IS_TRIGGER_CUSTOMKEY(ur_trigger))
 					gsc_trigger_customkey_set_keys(GSC_TRIGGER_CUSTOMKEY(ur_trigger),
