@@ -5,10 +5,10 @@ INCLUDES = \
 	$(GEDIT_CFLAGS) 						\
 	$(WARN_CFLAGS)							\
 	$(DISABLE_DEPRECATED_CFLAGS)					\
-	`pkg-config --cflags gtksourcecompletion-2.0`			\
+	`pkg-config --cflags gtksourceview-2.0`				\
 	`pkg-config --cflags gconf-2.0`					\
 	-DGEDIT_LOCALEDIR=\""$(prefix)/$(DATADIRNAME)/locale"\"		\
-	-DICON_DIR=\""$(datadir)/gtksourcecompletion/pixmaps"\" 
+	-DICON_DIR=\""$(datadir)/gtksourceview/pixmaps"\" 
 
 AM_CFLAGS =\
          -Wall\
@@ -17,20 +17,12 @@ AM_CFLAGS =\
 plugin_LTLIBRARIES = libdocwordscompletion.la
 
 libdocwordscompletion_la_SOURCES = \
-	gsc-documentwords-provider.h	\
-	gsc-documentwords-provider.c	\
-	gsc-geditrecent-provider.h	\
-	gsc-geditrecent-provider.c	\
-	gsc-geditopendoc-provider.h	\
-	gsc-geditopendoc-provider.c	\
-	gsc-proposal-open.h		\
-	gsc-proposal-open.c		\
-	gsc-proposal-recent.h		\
-	gsc-proposal-recent.c		\
+	gwp-provider-words.h	\
+	gwp-provider-words.c	\
 	docwordscompletion-plugin.h	\
 	docwordscompletion-plugin.c
 
-libdocwordscompletion_la_LDFLAGS = $(PLUGIN_LIBTOOL_FLAGS) `pkg-config --libs gtksourcecompletion-2.0` `pkg-config --libs gconf-2.0`
+libdocwordscompletion_la_LDFLAGS = $(PLUGIN_LIBTOOL_FLAGS) `pkg-config --libs gtksourceview-2.0` `pkg-config --libs gconf-2.0`
 
 # Glade files (if you use glade for your plugin, list those files here)
 gladedir = $(datadir)/gedit-2/glade

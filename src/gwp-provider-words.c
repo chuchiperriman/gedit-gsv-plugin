@@ -18,52 +18,60 @@
 #include <glib/gprintf.h>
 #include <string.h>
 #include <ctype.h>
-#include <gtksourcecompletion/gsc-utils.h>
-#include "gsc-documentwords-provider.h"
+#include <gtksourceview/gtksourcecompletionutils.h>
+#include <gtksourceview/gtksourcecompletionitem.h>
+#include "gwp-provider-words.h"
 
 #define ICON_FILE ICON_DIR"/document-words-icon.png"
 
-struct _GscDocumentwordsProviderPrivate {
-	gboolean is_completing;
+struct _GwpProviderWordsPrivate {
 	GHashTable *current_words;
 	GList *data_list;
 	gchar *cleaned_word;
 	GdkPixbuf *icon;
 	gint count;
-	GscDocumentwordsProviderSortType sort_type;
+	GwpProviderWordsSortType sort_type;
 	GtkTextIter start_iter;
-	GtkTextView *view;
+	GtkSourceView *view;
 };
 
-#define GSC_DOCUMENTWORDS_PROVIDER_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), GSC_TYPE_DOCUMENTWORDS_PROVIDER, GscDocumentwordsProviderPrivate))
+#define GWP_PROVIDER_WORDS_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), GWP_TYPE_PROVIDER_WORDS, GwpProviderWordsPrivate))
 enum  {
-	GSC_DOCUMENTWORDS_PROVIDER_DUMMY_PROPERTY,
+	GWP_PROVIDER_WORDS_DUMMY_PROPERTY,
 };
 static const gchar* 
-gsc_documentwords_provider_real_get_name(GscProvider *self);
+gwp_provider_words_real_get_name(GtkSourceCompletionProvider *self);
 
 static GList* 
-gsc_documentwords_provider_real_get_proposals (GscProvider* base,
-					       GscTrigger* trigger);
+gwp_provider_words_real_get_proposals (GtkSourceCompletionProvider* base,
+					       GtkSourceCompletionTrigger* trigger);
 
-static void 
-gsc_documentwords_provider_real_finish (GscProvider* base);
+static GtkSourceCompletionProviderIface* gwp_provider_words_parent_iface = NULL;
+static gpointer gwp_provider_words_parent_class = NULL;
 
-static GscProviderIface* gsc_documentwords_provider_parent_iface = NULL;
-static gpointer gsc_documentwords_provider_parent_class = NULL;
+static void
+clean_current_words(GwpProviderWords* self)
+{
+	/*Clean the previous data*/
+	if (self->priv->current_words!=NULL)
+	{	
+		g_hash_table_destroy(self->priv->current_words);
+		self->priv->current_words = NULL;
+	}
+}
 
 static gboolean
 pred_is_separator(gunichar ch, gpointer user_data)
 {
-	return gsc_char_is_separator(ch);
+	return gtk_source_completion_utils_is_separator(ch);
 }
 
 static gint
 utf8_len_compare(gconstpointer a, gconstpointer b)
 {
     glong lena,lenb;
-    lena = g_utf8_strlen(gsc_proposal_get_label((GscProposal*)a),-1);
-    lenb = g_utf8_strlen(gsc_proposal_get_label((GscProposal*)b),-1);
+    lena = g_utf8_strlen(gtk_source_completion_proposal_get_label((GtkSourceCompletionProposal*)a),-1);
+    lenb = g_utf8_strlen(gtk_source_completion_proposal_get_label((GtkSourceCompletionProposal*)b),-1);
     if (lena==lenb)
         return 0;
     else if (lena<lenb)
@@ -72,8 +80,26 @@ utf8_len_compare(gconstpointer a, gconstpointer b)
         return 1;
 }
 
+static gchar*
+clear_word(const gchar* word)
+{
+  int len = g_utf8_strlen(word,-1);
+  int i;
+  const gchar *temp = word;
+  
+  for (i=0;i<len;i++)
+  {
+    if (gtk_source_completion_utils_is_separator(g_utf8_get_char(temp)))
+      temp = g_utf8_next_char(temp);
+    else
+      return g_strdup(temp);
+    
+  }
+  return NULL;
+}
+
 static GHashTable*
-get_all_words(GscDocumentwordsProvider* self, GtkTextBuffer *buffer )
+get_all_words(GwpProviderWords* self, GtkTextBuffer *buffer )
 {
 	GtkTextIter start_iter;
 	GtkTextIter prev_iter;
@@ -142,17 +168,6 @@ is_valid_word(gchar *current_word, gchar *completion_word)
 	return FALSE;
 }
 
-static void
-clean_current_words(GscDocumentwordsProvider* self)
-{
-	/*Clean the previous data*/
-	if (self->priv->current_words!=NULL)
-	{	
-		g_hash_table_destroy(self->priv->current_words);
-		self->priv->current_words = NULL;
-	}
-}
-
 /*
  * Check the proposals hash and inserts the completion proposal into the final list
  */
@@ -162,28 +177,28 @@ gh_add_key_to_list(gpointer key,
 		   gpointer user_data)
 {
 
-	GscDocumentwordsProvider *self = GSC_DOCUMENTWORDS_PROVIDER(user_data);
+	GwpProviderWords *self = GWP_PROVIDER_WORDS(user_data);
 	if (self->priv->count>=500)
 	{
 		return;
 	}
-	GscProposal *data;
+	GtkSourceCompletionProposal *data;
 	if (is_valid_word(self->priv->cleaned_word,(gchar*)key))
 	{
 		self->priv->count++;
-		data = gsc_proposal_new((gchar*)key,
-					NULL,
-					self->priv->icon);
+		data = GTK_SOURCE_COMPLETION_PROPOSAL (gtk_source_completion_item_new((gchar*)key,
+						      self->priv->icon,
+						      NULL));
 		self->priv->data_list = g_list_append(self->priv->data_list,data);
 	}
 }
 
 static GList*
-_sort_completion_list(GscDocumentwordsProvider *self, GList *data_list)
+_sort_completion_list(GwpProviderWords *self, GList *data_list)
 {
 	switch(self->priv->sort_type)
 	{
-		case GSC_DOCUMENTWORDS_PROVIDER_SORT_BY_LENGTH:
+		case GWP_PROVIDER_WORDS_SORT_BY_LENGTH:
 		{
 			data_list = g_list_sort(data_list,
 						(GCompareFunc)utf8_len_compare );
@@ -198,28 +213,27 @@ _sort_completion_list(GscDocumentwordsProvider *self, GList *data_list)
 
 
 static const gchar* 
-gsc_documentwords_provider_real_get_name(GscProvider *self)
+gwp_provider_words_real_get_name(GtkSourceCompletionProvider *self)
 {
-	return GSC_DOCUMENTWORDS_PROVIDER_NAME;
+	return GWP_PROVIDER_WORDS_NAME;
 }
 
 static GList* 
-gsc_documentwords_provider_real_get_proposals (GscProvider* base, 
-					  GscTrigger *trigger)
+gwp_provider_words_real_get_proposals (GtkSourceCompletionProvider* base, 
+					  GtkSourceCompletionTrigger *trigger)
 {
-	GscDocumentwordsProvider *self = GSC_DOCUMENTWORDS_PROVIDER(base);
+	GwpProviderWords *self = GWP_PROVIDER_WORDS(base);
+	GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW (self->priv->view));
 	
-	gchar* current_word = gsc_get_last_word_and_iter(self->priv->view,
+	clean_current_words(self);
+
+	gchar* current_word = gtk_source_completion_utils_get_word_iter(GTK_SOURCE_BUFFER (text_buffer),
 						         &self->priv->start_iter,
 							 NULL);
-	self->priv->cleaned_word = gsc_clear_word(current_word);
+	self->priv->cleaned_word = clear_word(current_word);
 	g_free(current_word);
 	
-	if (!self->priv->is_completing)
-	{
-		GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(self->priv->view);
-		self->priv->current_words = get_all_words(self,text_buffer);
-	}
+	self->priv->current_words = get_all_words(self,text_buffer);
 	
 	self->priv->data_list = NULL;
 	self->priv->count = 0;
@@ -229,14 +243,8 @@ gsc_documentwords_provider_real_get_proposals (GscProvider* base,
 	
 	if (self->priv->data_list!=NULL)
 	{
-		self->priv->is_completing = TRUE;
 		self->priv->data_list = _sort_completion_list(self,
 							      self->priv->data_list);
-	}
-	else
-	{
-		clean_current_words(self);
-		self->priv->is_completing = FALSE;
 	}
 
 	/* GscManager frees this list and data */
@@ -244,18 +252,7 @@ gsc_documentwords_provider_real_get_proposals (GscProvider* base,
 }
 
 static void 
-gsc_documentwords_provider_real_finish (GscProvider* base)
-{
-	GscDocumentwordsProvider *self = GSC_DOCUMENTWORDS_PROVIDER(base);
-	/*Clean current word list*/
-	clean_current_words(self);
-	
-	self->priv->is_completing = FALSE;
-	
-}
-
-static void 
-gsc_documentwords_provider_get_property (GObject * object, 
+gwp_provider_words_get_property (GObject * object, 
 					 guint property_id, 
 					 GValue * value, 
 					 GParamSpec * pspec)
@@ -264,7 +261,7 @@ gsc_documentwords_provider_get_property (GObject * object,
 
 
 static void 
-gsc_documentwords_provider_set_property (GObject * object, 
+gwp_provider_words_set_property (GObject * object, 
 					 guint property_id, 
 					 const GValue * value, 
 					 GParamSpec * pspec)
@@ -272,10 +269,11 @@ gsc_documentwords_provider_set_property (GObject * object,
 }
 
 static void 
-gsc_documentwords_provider_finalize(GObject *object)
+gwp_provider_words_finalize(GObject *object)
 {
-	GscDocumentwordsProvider *self;
-	self = GSC_DOCUMENTWORDS_PROVIDER(object);
+	GwpProviderWords *self;
+	self = GWP_PROVIDER_WORDS(object);
+	
 	clean_current_words(self);
 	g_free(self->priv->cleaned_word);
 	self->priv->cleaned_word = NULL;
@@ -284,87 +282,86 @@ gsc_documentwords_provider_finalize(GObject *object)
 	self->priv->view = NULL;
 	gdk_pixbuf_unref (self->priv->icon);
 	
-	G_OBJECT_CLASS(gsc_documentwords_provider_parent_class)->finalize(object);
+	G_OBJECT_CLASS(gwp_provider_words_parent_class)->finalize(object);
 }
 
 
 static void 
-gsc_documentwords_provider_class_init (GscDocumentwordsProviderClass * klass)
+gwp_provider_words_class_init (GwpProviderWordsClass * klass)
 {
-	gsc_documentwords_provider_parent_class = g_type_class_peek_parent (klass);
-	G_OBJECT_CLASS (klass)->get_property = gsc_documentwords_provider_get_property;
-	G_OBJECT_CLASS (klass)->set_property = gsc_documentwords_provider_set_property;
-	G_OBJECT_CLASS (klass)->finalize = gsc_documentwords_provider_finalize;
+	gwp_provider_words_parent_class = g_type_class_peek_parent (klass);
+	G_OBJECT_CLASS (klass)->get_property = gwp_provider_words_get_property;
+	G_OBJECT_CLASS (klass)->set_property = gwp_provider_words_set_property;
+	G_OBJECT_CLASS (klass)->finalize = gwp_provider_words_finalize;
 }
 
 
 static void 
-gsc_documentwords_provider_interface_init (GscProviderIface * iface)
+gwp_provider_words_interface_init (GtkSourceCompletionProviderIface * iface)
 {
-	gsc_documentwords_provider_parent_iface = g_type_interface_peek_parent (iface);
-	iface->get_name = gsc_documentwords_provider_real_get_name;
-	iface->get_proposals = gsc_documentwords_provider_real_get_proposals;
-	iface->finish = gsc_documentwords_provider_real_finish;
+	gwp_provider_words_parent_iface = g_type_interface_peek_parent (iface);
+	iface->get_name = gwp_provider_words_real_get_name;
+	iface->get_proposals = gwp_provider_words_real_get_proposals;
 }
 
 
-static void gsc_documentwords_provider_init (GscDocumentwordsProvider * self)
+static void gwp_provider_words_init (GwpProviderWords * self)
 {
-	self->priv = g_new0(GscDocumentwordsProviderPrivate, 1);
+	self->priv = g_new0(GwpProviderWordsPrivate, 1);
 	self->priv->current_words = NULL;
-	self->priv->is_completing = FALSE;
 	self->priv->count=0;
 	self->priv->view = NULL;
 	self->priv->cleaned_word=NULL;
 	self->priv->icon = gdk_pixbuf_new_from_file(ICON_FILE,NULL);
-	self->priv->sort_type = GSC_DOCUMENTWORDS_PROVIDER_SORT_BY_LENGTH;
+	self->priv->sort_type = GWP_PROVIDER_WORDS_SORT_BY_LENGTH;
 }
 
-GType gsc_documentwords_provider_get_type ()
+GType gwp_provider_words_get_type ()
 {
 	static GType g_define_type_id = 0;
 	if (G_UNLIKELY (g_define_type_id == 0)) {
-		static const GTypeInfo g_define_type_info = {sizeof (GscDocumentwordsProviderClass), 
+		static const GTypeInfo g_define_type_info = {sizeof (GwpProviderWordsClass), 
 							     (GBaseInitFunc) NULL,
 							     (GBaseFinalizeFunc) NULL, 
-							     (GClassInitFunc) gsc_documentwords_provider_class_init, 
+							     (GClassInitFunc) gwp_provider_words_class_init, 
 							     (GClassFinalizeFunc) NULL, 
 							     NULL, 
-							     sizeof (GscDocumentwordsProvider), 
+							     sizeof (GwpProviderWords), 
 							     0, 
-							     (GInstanceInitFunc) gsc_documentwords_provider_init 
+							     (GInstanceInitFunc) gwp_provider_words_init 
 							     };
 		g_define_type_id = g_type_register_static (G_TYPE_OBJECT, 
-							   "GscDocumentwordsProvider", 
+							   "GwpProviderWords", 
 							   &g_define_type_info,
 							   0);
-		static const GInterfaceInfo gsc_provider_info = {(GInterfaceInitFunc) gsc_documentwords_provider_interface_init,
+		static const GInterfaceInfo gsc_provider_info = {(GInterfaceInitFunc) gwp_provider_words_interface_init,
 										   (GInterfaceFinalizeFunc) NULL, 
 										   NULL};
 		g_type_add_interface_static (g_define_type_id, 
-					     GSC_TYPE_PROVIDER, 
+					     GTK_TYPE_SOURCE_COMPLETION_PROVIDER, 
 					     &gsc_provider_info);
 	}
 	return g_define_type_id;
 }
 
-GscDocumentwordsProvider*
-gsc_documentwords_provider_new(GtkTextView *view)
+GwpProviderWords*
+gwp_provider_words_new(GtkSourceView *view)
 {
-	GscDocumentwordsProvider* self = GSC_DOCUMENTWORDS_PROVIDER (g_object_new (GSC_TYPE_DOCUMENTWORDS_PROVIDER, NULL));
+	GwpProviderWords* self = GWP_PROVIDER_WORDS (g_object_new (GWP_TYPE_PROVIDER_WORDS, NULL));
 	self->priv->view = view;
+	
 	return self;
 }
 
 void
-gsc_documentwords_provider_set_sort_type(GscDocumentwordsProvider *prov,
-					 GscDocumentwordsProviderSortType sort_type)
+gwp_provider_words_set_sort_type(GwpProviderWords *prov,
+					 GwpProviderWordsSortType sort_type)
 {
 	prov->priv->sort_type = sort_type;
 }
 
-GscDocumentwordsProviderSortType
-gsc_documentwords_provider_get_sort_type(GscDocumentwordsProvider *prov)
+GwpProviderWordsSortType
+gwp_provider_words_get_sort_type(GwpProviderWords *prov)
 {
 	return prov->priv->sort_type;
 }

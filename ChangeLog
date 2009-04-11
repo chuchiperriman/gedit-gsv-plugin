@@ -1,3 +1,9 @@
+2009-04-11  Jesús Barbero Rodríguez <chuchiperriman@gmail.com>
+	
+	* all:
+	Renamed to gwp-provider-words
+	Adapted to gtksourceview
+
 2009-04-10  Jesús Barbero Rodríguez <chuchiperriman@gmail.com>
 
 	* all:
