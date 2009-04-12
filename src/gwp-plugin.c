@@ -1,5 +1,5 @@
 /*
- * docwordscompletion-plugin.c - Adds (auto)completion support to gedit
+ * gwp-plugin.c - Adds (auto)completion support to gedit
  *
  * Copyright (C) 2007 - chuchiperriman
  *
@@ -22,7 +22,7 @@
 #include <config.h>
 #endif
 
-#include "docwordscompletion-plugin.h"
+#include "gwp-plugin.h"
 
 #include <gdk/gdk.h>
 #include <glib/gi18n-lib.h>
@@ -33,11 +33,11 @@
 #include <gtksourceview/gtksourcecompletiontriggerwords.h>
 #include "gwp-provider-words.h"
 
-#define DOCWORDSCOMPLETION_PLUGIN_GET_PRIVATE(object)	(G_TYPE_INSTANCE_GET_PRIVATE ((object), TYPE_DOCWORDSCOMPLETION_PLUGIN, DocwordscompletionPluginPrivate))
+#define GWP_PLUGIN_GET_PRIVATE(object)	(G_TYPE_INSTANCE_GET_PRIVATE ((object), GWP_TYPE_PLUGIN, GwpPluginPrivate))
 
 #define TEMP_TRIGGER_NAME "UserRequestTrigger"
 
-struct _DocwordscompletionPluginPrivate
+struct _GwpPluginPrivate
 {
 	GeditWindow *gedit_window;
 	GtkWidget *window;
@@ -45,29 +45,29 @@ struct _DocwordscompletionPluginPrivate
 
 typedef struct _ViewAndCompletion ViewAndCompletion;
 
-GEDIT_PLUGIN_REGISTER_TYPE (DocwordscompletionPlugin, docwordscompletion_plugin)
+GEDIT_PLUGIN_REGISTER_TYPE (GwpPlugin, gwp_plugin)
 
 static void
-docwordscompletion_plugin_init (DocwordscompletionPlugin *plugin)
+gwp_plugin_init (GwpPlugin *plugin)
 {
-	plugin->priv = DOCWORDSCOMPLETION_PLUGIN_GET_PRIVATE (plugin);
+	plugin->priv = GWP_PLUGIN_GET_PRIVATE (plugin);
 	gedit_debug_message (DEBUG_PLUGINS,
-			     "DocwordscompletionPlugin initializing");
+			     "GwpPlugin initializing");
 }
 
 static void
-docwordscompletion_plugin_finalize (GObject *object)
+gwp_plugin_finalize (GObject *object)
 {
 	gedit_debug_message (DEBUG_PLUGINS,
-			     "DocwordscompletionPlugin finalizing");
-	G_OBJECT_CLASS (docwordscompletion_plugin_parent_class)->finalize (object);
+			     "GwpPlugin finalizing");
+	G_OBJECT_CLASS (gwp_plugin_parent_class)->finalize (object);
 }
 
 static void
 impl_activate (GeditPlugin *plugin,
 	       GeditWindow *window)
 {
-	DocwordscompletionPlugin * dw_plugin = (DocwordscompletionPlugin*)plugin;
+	GwpPlugin * dw_plugin = (GwpPlugin*)plugin;
 	dw_plugin->priv->gedit_window = window;
 	gedit_debug (DEBUG_PLUGINS);
 
@@ -84,7 +84,7 @@ static void
 impl_update_ui (GeditPlugin *plugin,
 		GeditWindow *window)
 {
-	DocwordscompletionPlugin * dw_plugin = (DocwordscompletionPlugin*)plugin;
+	GwpPlugin * dw_plugin = (GwpPlugin*)plugin;
 	GtkSourceCompletionTrigger *ur_trigger, *ac_trigger;
 	dw_plugin->priv->gedit_window = window;
 	gedit_debug (DEBUG_PLUGINS);
@@ -129,18 +129,18 @@ impl_update_ui (GeditPlugin *plugin,
 }
 
 static void
-docwordscompletion_plugin_class_init (DocwordscompletionPluginClass *klass)
+gwp_plugin_class_init (GwpPluginClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 	GeditPluginClass *plugin_class = GEDIT_PLUGIN_CLASS (klass);
 
-	object_class->finalize = docwordscompletion_plugin_finalize;
+	object_class->finalize = gwp_plugin_finalize;
 
 	plugin_class->activate = impl_activate;
 	plugin_class->deactivate = impl_deactivate;
 	plugin_class->update_ui = impl_update_ui;
 
 	g_type_class_add_private (object_class, 
-				  sizeof (DocwordscompletionPluginPrivate));
+				  sizeof (GwpPluginPrivate));
 }
 

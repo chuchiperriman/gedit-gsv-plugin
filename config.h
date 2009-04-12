@@ -5,7 +5,7 @@
 #define ENABLE_NLS 1
 
 /* Gettext package */
-#define GETTEXT_PACKAGE "gedit-docwordscompletion"
+#define GETTEXT_PACKAGE "gedit-gwp"
 
 /* Define to 1 if you have the `bind_textdomain_codeset' function. */
 #define HAVE_BIND_TEXTDOMAIN_CODESET 1
@@ -57,19 +57,19 @@
 #define LT_OBJDIR ".libs/"
 
 /* Name of package */
-#define PACKAGE "gedit-docwordscompletion"
+#define PACKAGE "gedit-gwp"
 
 /* Define to the address where bug reports for this package should be sent. */
 #define PACKAGE_BUGREPORT "http://sourceforge.net/projects/gtksourcecomple"
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME "gedit-docwordscompletion"
+#define PACKAGE_NAME "gedit-gwp"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "gedit-docwordscompletion 0.7.0"
+#define PACKAGE_STRING "gedit-gwp 0.7.0"
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME "gedit-docwordscompletion"
+#define PACKAGE_TARNAME "gedit-gwp"
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "0.7.0"
