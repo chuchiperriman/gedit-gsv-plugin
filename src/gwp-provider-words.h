@@ -66,6 +66,8 @@ typedef enum{
 GwpProviderWords* 
 gwp_provider_words_new(GtkSourceView *view);
 
+/*TODO Change to a sort_function*/
+
 /**
  * gwp_provider_words_set_sort_type:
  * @prov: The #GwpProviderWords

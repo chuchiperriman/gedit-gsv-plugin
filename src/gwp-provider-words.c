@@ -22,32 +22,43 @@
 #include <gtksourceview/gtksourcecompletionitem.h>
 #include "gwp-provider-words.h"
 
-#define ICON_FILE ICON_DIR"/document-words-icon.png"
+#define GWP_PROVIDER_WORDS_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), GWP_TYPE_PROVIDER_WORDS, GwpProviderWordsPrivate))
+
+static void	 gwp_provider_words_iface_init	(GtkSourceCompletionProviderIface *iface);
 
 struct _GwpProviderWordsPrivate {
 	GHashTable *current_words;
 	GList *data_list;
 	gchar *cleaned_word;
-	GdkPixbuf *icon;
+	GdkPixbuf *provider_icon;
+	GdkPixbuf *proposal_icon;
 	gint count;
 	GwpProviderWordsSortType sort_type;
 	GtkTextIter start_iter;
 	GtkSourceView *view;
 };
 
-#define GWP_PROVIDER_WORDS_GET_PRIVATE(o) (G_TYPE_INSTANCE_GET_PRIVATE ((o), GWP_TYPE_PROVIDER_WORDS, GwpProviderWordsPrivate))
-enum  {
-	GWP_PROVIDER_WORDS_DUMMY_PROPERTY,
-};
-static const gchar* 
-gwp_provider_words_real_get_name(GtkSourceCompletionProvider *self);
+G_DEFINE_TYPE_WITH_CODE (GwpProviderWords,
+			 gwp_provider_words,
+			 G_TYPE_OBJECT,
+			 G_IMPLEMENT_INTERFACE (GTK_TYPE_SOURCE_COMPLETION_PROVIDER,
+				 		gwp_provider_words_iface_init))
 
-static GList* 
-gwp_provider_words_real_get_proposals (GtkSourceCompletionProvider* base,
-					       GtkSourceCompletionTrigger* trigger);
+static GdkPixbuf *
+get_icon_from_theme (const gchar *name)
+{
+	GtkIconTheme *theme;
+	gint width;
+	
+	theme = gtk_icon_theme_get_default ();
 
-static GtkSourceCompletionProviderIface* gwp_provider_words_parent_iface = NULL;
-static gpointer gwp_provider_words_parent_class = NULL;
+	gtk_icon_size_lookup (GTK_ICON_SIZE_MENU, &width, NULL);
+	return gtk_icon_theme_load_icon (theme,
+	                                 name,
+	                                 width,
+	                                 GTK_ICON_LOOKUP_USE_BUILTIN,
+	                                 NULL);
+}
 
 static void
 clean_current_words(GwpProviderWords* self)
@@ -187,7 +198,7 @@ gh_add_key_to_list(gpointer key,
 	{
 		self->priv->count++;
 		data = GTK_SOURCE_COMPLETION_PROPOSAL (gtk_source_completion_item_new((gchar*)key,
-						      self->priv->icon,
+						      self->priv->proposal_icon,
 						      NULL));
 		self->priv->data_list = g_list_append(self->priv->data_list,data);
 	}
@@ -212,15 +223,21 @@ _sort_completion_list(GwpProviderWords *self, GList *data_list)
 }
 
 
-static const gchar* 
-gwp_provider_words_real_get_name(GtkSourceCompletionProvider *self)
+static const gchar * 
+gwp_provider_words_get_name (GtkSourceCompletionProvider *self)
 {
 	return GWP_PROVIDER_WORDS_NAME;
 }
 
-static GList* 
-gwp_provider_words_real_get_proposals (GtkSourceCompletionProvider* base, 
-					  GtkSourceCompletionTrigger *trigger)
+
+GdkPixbuf * 
+gwp_provider_words_get_icon (GtkSourceCompletionProvider *self)
+{
+	return  GWP_PROVIDER_WORDS(self)->priv->provider_icon;
+}
+
+static GList *
+gwp_provider_words_get_proposals (GtkSourceCompletionProvider *base)
 {
 	GwpProviderWords *self = GWP_PROVIDER_WORDS(base);
 	GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW (self->priv->view));
@@ -247,25 +264,24 @@ gwp_provider_words_real_get_proposals (GtkSourceCompletionProvider* base,
 							      self->priv->data_list);
 	}
 
-	/* GscManager frees this list and data */
 	return self->priv->data_list;
 }
 
-static void 
-gwp_provider_words_get_property (GObject * object, 
-					 guint property_id, 
-					 GValue * value, 
-					 GParamSpec * pspec)
+static gboolean
+gwp_provider_words_filter_proposal (GtkSourceCompletionProvider *provider,
+                                   GtkSourceCompletionProposal *proposal,
+                                   const gchar                 *criteria)
 {
+	const gchar *label;
+	
+	label = gtk_source_completion_proposal_get_label (proposal);
+	return g_str_has_prefix (label, criteria);
 }
 
-
-static void 
-gwp_provider_words_set_property (GObject * object, 
-					 guint property_id, 
-					 const GValue * value, 
-					 GParamSpec * pspec)
+static gboolean
+gwp_provider_words_get_interactive (GtkSourceCompletionProvider *provider)
 {
+	return TRUE;
 }
 
 static void 
@@ -280,8 +296,8 @@ gwp_provider_words_finalize(GObject *object)
 	self->priv->data_list = NULL;
 	self->priv->count= 0;
 	self->priv->view = NULL;
-	gdk_pixbuf_unref (self->priv->icon);
-	
+	gdk_pixbuf_unref (self->priv->provider_icon);
+	gdk_pixbuf_unref (self->priv->proposal_icon);
 	G_OBJECT_CLASS(gwp_provider_words_parent_class)->finalize(object);
 }
 
@@ -289,67 +305,43 @@ gwp_provider_words_finalize(GObject *object)
 static void 
 gwp_provider_words_class_init (GwpProviderWordsClass * klass)
 {
-	gwp_provider_words_parent_class = g_type_class_peek_parent (klass);
-	G_OBJECT_CLASS (klass)->get_property = gwp_provider_words_get_property;
-	G_OBJECT_CLASS (klass)->set_property = gwp_provider_words_set_property;
+	GObjectClass *object_class = G_OBJECT_CLASS (klass);
+	
 	G_OBJECT_CLASS (klass)->finalize = gwp_provider_words_finalize;
+	
+	g_type_class_add_private (object_class, sizeof(GwpProviderWordsPrivate));
 }
 
 
 static void 
-gwp_provider_words_interface_init (GtkSourceCompletionProviderIface * iface)
+gwp_provider_words_iface_init (GtkSourceCompletionProviderIface * iface)
 {
-	gwp_provider_words_parent_iface = g_type_interface_peek_parent (iface);
-	iface->get_name = gwp_provider_words_real_get_name;
-	iface->get_proposals = gwp_provider_words_real_get_proposals;
+	iface->get_name = gwp_provider_words_get_name;
+	iface->get_icon = gwp_provider_words_get_icon;
+
+	iface->get_proposals = gwp_provider_words_get_proposals;
+	iface->filter_proposal = gwp_provider_words_filter_proposal;
+	iface->get_interactive = gwp_provider_words_get_interactive;
 }
 
 
 static void gwp_provider_words_init (GwpProviderWords * self)
 {
-	self->priv = g_new0(GwpProviderWordsPrivate, 1);
+	self->priv = GWP_PROVIDER_WORDS_GET_PRIVATE (self);
 	self->priv->current_words = NULL;
 	self->priv->count=0;
 	self->priv->view = NULL;
 	self->priv->cleaned_word=NULL;
-	self->priv->icon = gdk_pixbuf_new_from_file(ICON_FILE,NULL);
+	self->priv->provider_icon = get_icon_from_theme (GTK_STOCK_COPY);
+	self->priv->proposal_icon = get_icon_from_theme (GTK_STOCK_NEW);
 	self->priv->sort_type = GWP_PROVIDER_WORDS_SORT_BY_LENGTH;
-}
-
-GType gwp_provider_words_get_type ()
-{
-	static GType g_define_type_id = 0;
-	if (G_UNLIKELY (g_define_type_id == 0)) {
-		static const GTypeInfo g_define_type_info = {sizeof (GwpProviderWordsClass), 
-							     (GBaseInitFunc) NULL,
-							     (GBaseFinalizeFunc) NULL, 
-							     (GClassInitFunc) gwp_provider_words_class_init, 
-							     (GClassFinalizeFunc) NULL, 
-							     NULL, 
-							     sizeof (GwpProviderWords), 
-							     0, 
-							     (GInstanceInitFunc) gwp_provider_words_init 
-							     };
-		g_define_type_id = g_type_register_static (G_TYPE_OBJECT, 
-							   "GwpProviderWords", 
-							   &g_define_type_info,
-							   0);
-		static const GInterfaceInfo gsc_provider_info = {(GInterfaceInitFunc) gwp_provider_words_interface_init,
-										   (GInterfaceFinalizeFunc) NULL, 
-										   NULL};
-		g_type_add_interface_static (g_define_type_id, 
-					     GTK_TYPE_SOURCE_COMPLETION_PROVIDER, 
-					     &gsc_provider_info);
-	}
-	return g_define_type_id;
 }
 
 GwpProviderWords*
 gwp_provider_words_new(GtkSourceView *view)
 {
-	GwpProviderWords* self = GWP_PROVIDER_WORDS (g_object_new (GWP_TYPE_PROVIDER_WORDS, NULL));
+	GwpProviderWords *self = g_object_new (GWP_TYPE_PROVIDER_WORDS, NULL);
 	self->priv->view = view;
-	
 	return self;
 }
 

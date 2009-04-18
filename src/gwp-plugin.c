@@ -64,12 +64,31 @@ gwp_plugin_finalize (GObject *object)
 }
 
 static void
+tab_added_cb (GeditWindow *geditwindow,
+	      GeditTab    *tab,
+	      gpointer     user_data)
+{
+	GeditView *view = gedit_tab_get_view (tab);
+	GtkSourceCompletion *comp = gtk_source_view_get_completion (GTK_SOURCE_VIEW (view));
+	g_debug ("Adding Words provider");
+	GwpProviderWords *dw  = gwp_provider_words_new(GTK_SOURCE_VIEW (view));
+	gtk_source_completion_add_provider(comp,GTK_SOURCE_COMPLETION_PROVIDER(dw));
+	
+	g_object_unref(dw);
+	g_debug ("provider registered");
+}
+
+static void
 impl_activate (GeditPlugin *plugin,
 	       GeditWindow *window)
 {
 	GwpPlugin * dw_plugin = (GwpPlugin*)plugin;
 	dw_plugin->priv->gedit_window = window;
 	gedit_debug (DEBUG_PLUGINS);
+	
+	g_signal_connect (window, "tab-added",
+			  G_CALLBACK (tab_added_cb),
+			  NULL);
 
 }
 
@@ -84,48 +103,7 @@ static void
 impl_update_ui (GeditPlugin *plugin,
 		GeditWindow *window)
 {
-	GwpPlugin * dw_plugin = (GwpPlugin*)plugin;
-	GtkSourceCompletionTrigger *ur_trigger, *ac_trigger;
-	dw_plugin->priv->gedit_window = window;
-	gedit_debug (DEBUG_PLUGINS);
-	GtkSourceView* view = GTK_SOURCE_VIEW(gedit_window_get_active_view(window));
-	if (view!=NULL)
-	{
-		GtkSourceCompletion *comp = gtk_source_view_get_completion (view);
 
-		if (gtk_source_completion_get_provider(comp,GWP_PROVIDER_WORDS_NAME)==NULL)
-		{
-			g_debug ("Adding wordsprovider");
-			GwpProviderWords *dw  = gwp_provider_words_new(view);
-			
-			//TODO get the default user request trigger
-			ur_trigger = gtk_source_completion_get_trigger(comp, TEMP_TRIGGER_NAME);
-			if (ur_trigger==NULL)
-			{
-				ur_trigger = GTK_SOURCE_COMPLETION_TRIGGER(gtk_source_completion_trigger_key_new (comp, TEMP_TRIGGER_NAME));
-				gtk_source_completion_add_trigger(comp,ur_trigger);
-				g_object_unref(ur_trigger);
-				g_debug ("added user request trigger");
-			}
-			
-			gtk_source_completion_add_provider(comp,GTK_SOURCE_COMPLETION_PROVIDER(dw),ur_trigger);
-			
-			ac_trigger = gtk_source_completion_get_trigger(comp, GTK_SOURCE_COMPLETION_TRIGGER_WORDS_NAME);
-			if (ac_trigger==NULL)
-			{
-				ac_trigger = GTK_SOURCE_COMPLETION_TRIGGER (gtk_source_completion_trigger_words_new(comp));
-				gtk_source_completion_add_trigger(comp,GTK_SOURCE_COMPLETION_TRIGGER(ac_trigger));
-				gtk_source_completion_trigger_words_set_delay(GTK_SOURCE_COMPLETION_TRIGGER_WORDS (ac_trigger),300);
-				g_object_unref(ac_trigger);
-				g_debug ("added words trigger");
-			}
-			gtk_source_completion_add_provider(comp,GTK_SOURCE_COMPLETION_PROVIDER(dw),ac_trigger);
-			
-			g_object_unref(dw);
-			g_debug ("provider registered");
-		}
-
-	}
 }
 
 static void
