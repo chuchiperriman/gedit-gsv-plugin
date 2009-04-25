@@ -18,7 +18,7 @@
 #include <glib/gprintf.h>
 #include <string.h>
 #include <ctype.h>
-#include <gtksourceview/gtksourcecompletionutils.h>
+#include <gtksourceview/gtksourceview.h>
 #include <gtksourceview/gtksourcecompletionitem.h>
 #include "gwp-provider-words.h"
 
@@ -43,6 +43,65 @@ G_DEFINE_TYPE_WITH_CODE (GwpProviderWords,
 			 G_TYPE_OBJECT,
 			 G_IMPLEMENT_INTERFACE (GTK_TYPE_SOURCE_COMPLETION_PROVIDER,
 				 		gwp_provider_words_iface_init))
+
+static gboolean
+is_separator(const gunichar ch)
+{
+	if (g_unichar_isprint(ch) && 
+	    (g_unichar_isalnum(ch) || ch == g_utf8_get_char("_")))
+	{
+		return FALSE;
+	}
+	
+	return TRUE;
+}
+
+gchar *
+get_word_iter (GtkSourceBuffer *source_buffer, 
+	       GtkTextIter     *current,
+	       GtkTextIter     *start_word, 
+	       GtkTextIter     *end_word)
+{
+	GtkTextBuffer *text_buffer;
+	gunichar ch;
+	gboolean no_doc_start;
+	
+	text_buffer = GTK_TEXT_BUFFER (source_buffer);
+	
+	if (current == NULL)
+	{
+		gtk_text_buffer_get_iter_at_mark (text_buffer,
+		                                  start_word,
+		                                  gtk_text_buffer_get_insert (text_buffer));
+	}
+	else
+	{
+		*start_word = *current;
+	}
+	
+	*end_word = *start_word;
+
+	while ((no_doc_start = gtk_text_iter_backward_char (start_word)) == TRUE)
+	{
+		ch = gtk_text_iter_get_char (start_word);
+
+		if (is_separator (ch))
+		{
+			break;
+		}
+	}
+	
+	if (!no_doc_start)
+	{
+		gtk_text_buffer_get_start_iter (text_buffer, start_word);
+		return gtk_text_iter_get_text (start_word, end_word);
+	}
+	else
+	{
+		gtk_text_iter_forward_char (start_word);
+		return gtk_text_iter_get_text (start_word, end_word);
+	}
+}
 
 static GdkPixbuf *
 get_icon_from_theme (const gchar *name)
@@ -74,7 +133,7 @@ clean_current_words(GwpProviderWords* self)
 static gboolean
 pred_is_separator(gunichar ch, gpointer user_data)
 {
-	return gtk_source_completion_utils_is_separator(ch);
+	return is_separator(ch);
 }
 
 static gint
@@ -100,7 +159,7 @@ clear_word(const gchar* word)
   
   for (i=0;i<len;i++)
   {
-    if (gtk_source_completion_utils_is_separator(g_utf8_get_char(temp)))
+    if (is_separator(g_utf8_get_char(temp)))
       temp = g_utf8_next_char(temp);
     else
       return g_strdup(temp);
@@ -237,16 +296,18 @@ gwp_provider_words_get_icon (GtkSourceCompletionProvider *self)
 }
 
 static GList *
-gwp_provider_words_get_proposals (GtkSourceCompletionProvider *base)
+gwp_provider_words_get_proposals (GtkSourceCompletionProvider 	*base,
+				  GtkTextIter			*place)
 {
 	GwpProviderWords *self = GWP_PROVIDER_WORDS(base);
 	GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW (self->priv->view));
-	
+	GtkTextIter end_iter;
 	clean_current_words(self);
 
-	gchar* current_word = gtk_source_completion_utils_get_word_iter(GTK_SOURCE_BUFFER (text_buffer),
-						         &self->priv->start_iter,
-							 NULL);
+	gchar* current_word = get_word_iter(GTK_SOURCE_BUFFER (text_buffer),
+					    place,
+					    &self->priv->start_iter,
+					    &end_iter);
 	self->priv->cleaned_word = clear_word(current_word);
 	g_free(current_word);
 	
@@ -269,8 +330,9 @@ gwp_provider_words_get_proposals (GtkSourceCompletionProvider *base)
 
 static gboolean
 gwp_provider_words_filter_proposal (GtkSourceCompletionProvider *provider,
-                                   GtkSourceCompletionProposal *proposal,
-                                   const gchar                 *criteria)
+                                    GtkSourceCompletionProposal *proposal,
+				    GtkTextIter			*iter,
+                                    const gchar			*criteria)
 {
 	const gchar *label;
 	

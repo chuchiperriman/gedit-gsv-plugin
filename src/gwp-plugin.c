@@ -72,7 +72,7 @@ tab_added_cb (GeditWindow *geditwindow,
 	GtkSourceCompletion *comp = gtk_source_view_get_completion (GTK_SOURCE_VIEW (view));
 	g_debug ("Adding Words provider");
 	GwpProviderWords *dw  = gwp_provider_words_new(GTK_SOURCE_VIEW (view));
-	gtk_source_completion_add_provider(comp,GTK_SOURCE_COMPLETION_PROVIDER(dw));
+	gtk_source_completion_add_provider(comp,GTK_SOURCE_COMPLETION_PROVIDER(dw), NULL);
 	
 	g_object_unref(dw);
 	g_debug ("provider registered");
