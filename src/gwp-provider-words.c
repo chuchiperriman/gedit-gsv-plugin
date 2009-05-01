@@ -257,6 +257,7 @@ gh_add_key_to_list(gpointer key,
 	{
 		self->priv->count++;
 		data = GTK_SOURCE_COMPLETION_PROPOSAL (gtk_source_completion_item_new((gchar*)key,
+						      (gchar*)key,
 						      self->priv->proposal_icon,
 						      NULL));
 		self->priv->data_list = g_list_append(self->priv->data_list,data);
