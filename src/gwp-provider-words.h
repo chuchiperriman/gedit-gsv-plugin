@@ -31,7 +31,7 @@ G_BEGIN_DECLS
 #define GWP_IS_PROVIDER_WORDS_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), GWP_TYPE_PROVIDER_WORDS))
 #define GWP_PROVIDER_WORDS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), GWP_TYPE_PROVIDER_WORDS, GwpProviderWordsClass))
 
-#define GWP_PROVIDER_WORDS_NAME "GwpProviderWords"
+#define GWP_PROVIDER_WORDS_NAME "Document words"
 
 typedef struct _GwpProviderWords GwpProviderWords;
 typedef struct _GwpProviderWordsClass GwpProviderWordsClass;
