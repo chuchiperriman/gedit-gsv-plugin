@@ -28,9 +28,6 @@
 #include <glib/gi18n-lib.h>
 #include <gedit/gedit-debug.h>
 #include <gconf/gconf-client.h>
-#include <gtksourceview/gtksourcecompletiontrigger.h>
-#include <gtksourceview/gtksourcecompletiontriggerkey.h>
-#include <gtksourceview/gtksourcecompletiontriggerwords.h>
 #include "gwp-provider-words.h"
 
 #define GWP_PLUGIN_GET_PRIVATE(object)	(G_TYPE_INSTANCE_GET_PRIVATE ((object), GWP_TYPE_PLUGIN, GwpPluginPrivate))
