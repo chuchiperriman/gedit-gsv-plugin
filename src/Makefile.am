@@ -17,8 +17,14 @@ AM_CFLAGS =\
 plugin_LTLIBRARIES = libdocwordscompletion.la
 
 libdocwordscompletion_la_SOURCES = \
-	gsc-documentwords-provider.h	\
-	gsc-documentwords-provider.c	\
+	gsc-provider-words.h		\
+	gsc-provider-words.c		\
+	docwordscompletion-plugin.h	\
+	docwordscompletion-plugin.c
+
+#libdocwordscompletion_la_SOURCES = \
+	gsc-provider-words.h		\
+	gsc-provider-words.c		\
 	gsc-geditrecent-provider.h	\
 	gsc-geditrecent-provider.c	\
 	gsc-geditopendoc-provider.h	\
